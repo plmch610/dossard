@@ -1,11 +1,30 @@
 from __future__ import annotations
 
+import csv
+import io
 import sqlite3
-from datetime import date
+from datetime import date, datetime
+
+from pydantic import ValidationError
 
 from app.categories import age_category
-from app.errors import ConflictError, NotFoundError
-from app.schemas import AthleteCreate, AthleteOut
+from app.errors import ApiError, ConflictError, NotFoundError
+from app.schemas import AthleteCreate, AthleteOut, ImportLineError, ImportReport
+
+IMPORT_COLUMNS = (
+    "nom",
+    "prenom",
+    "date_naissance",
+    "sexe",
+    "club",
+    "licence",
+    "certificat_valide_jusqu",
+)
+
+
+class InvalidImportError(ApiError):
+    status_code = 422
+    code = "invalid_import"
 
 
 def _to_athlete(row: sqlite3.Row) -> AthleteOut:
@@ -64,3 +83,62 @@ def create_athlete(conn: sqlite3.Connection, data: AthleteCreate) -> AthleteOut:
     )
     row = conn.execute("SELECT * FROM athletes WHERE id = ?", (cursor.lastrowid,)).fetchone()
     return _to_athlete(row)
+
+
+def _parse_french_date(value: str) -> date | None:
+    value = value.strip()
+    if not value:
+        return None
+    return datetime.strptime(value, "%d/%m/%Y").date()
+
+
+def _import_row(row: dict[str, str]) -> AthleteCreate:
+    return AthleteCreate(
+        last_name=row["nom"].strip(),
+        first_name=row["prenom"].strip(),
+        birth_date=_parse_french_date(row["date_naissance"]),
+        sex=row["sexe"].strip(),
+        club=row["club"].strip() or None,
+        license_number=row["licence"].strip(),
+        medical_certificate_valid_until=_parse_french_date(row["certificat_valide_jusqu"]),
+    )
+
+
+def _validation_message(error: ValidationError) -> str:
+    return "; ".join(
+        f"{'.'.join(str(part) for part in item['loc'])} : {item['msg']}" for item in error.errors()
+    )
+
+
+def import_athletes(conn: sqlite3.Connection, content: bytes) -> ImportReport:
+    """Importe l'export CSV de la fédération ; une ligne invalide n'arrête pas les autres."""
+    try:
+        text = content.decode("utf-8-sig")
+    except UnicodeDecodeError as exc:
+        raise InvalidImportError("Le fichier doit être encodé en UTF-8") from exc
+
+    reader = csv.DictReader(io.StringIO(text), delimiter=";")
+    missing = [name for name in IMPORT_COLUMNS if name not in (reader.fieldnames or [])]
+    if missing:
+        raise InvalidImportError(f"Colonnes manquantes : {', '.join(missing)}")
+
+    created = 0
+    skipped = 0
+    errors: list[ImportLineError] = []
+    for row in reader:
+        line = reader.line_num
+        if None in row or None in row.values():
+            errors.append(ImportLineError(line=line, message="Nombre de colonnes incorrect"))
+            continue
+        try:
+            data = _import_row(row)
+            create_athlete(conn, data)
+        except ConflictError:
+            skipped += 1
+        except ValidationError as exc:
+            errors.append(ImportLineError(line=line, message=_validation_message(exc)))
+        except ValueError as exc:
+            errors.append(ImportLineError(line=line, message=f"Date invalide : {exc}"))
+        else:
+            created += 1
+    return ImportReport(created=created, skipped=skipped, errors=errors)

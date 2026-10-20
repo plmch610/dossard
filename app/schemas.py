@@ -88,6 +88,17 @@ class AthleteCreate(BaseModel):
     medical_certificate_valid_until: dt.date | None = None
 
 
+class ImportLineError(BaseModel):
+    line: int
+    message: str
+
+
+class ImportReport(BaseModel):
+    created: int
+    skipped: int
+    errors: list[ImportLineError]
+
+
 class AthleteOut(BaseModel):
     id: int
     first_name: str
