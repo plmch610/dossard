@@ -80,36 +80,33 @@ def export_csv(conn: sqlite3.Connection, competition_id: int) -> str:
             "performance",
         ]
     )
-    events = conn.execute(
-        "SELECT * FROM events WHERE competition_id = ? ORDER BY id", (competition_id,)
-    ).fetchall()
-    for event in events:
-        rows = conn.execute(
-            "SELECT r.bib, a.*, res.performance FROM results res"
-            " JOIN registrations r ON r.id = res.registration_id"
-            " JOIN athletes a ON a.id = r.athlete_id"
-            " WHERE r.event_id = ? AND r.status = 'confirmed' ORDER BY r.bib",
-            (event["id"],),
-        ).fetchall()
-        for row in rows:
-            if event["unit"] in ("time_s", "distance_m"):
-                performance = str(round(row["performance"], 2))
-            else:
-                performance = str(int(row["performance"]))
-            writer.writerow(
-                [
-                    competition["name"],
-                    event["name"],
-                    event["unit"],
-                    row["bib"],
-                    row["first_name"],
-                    row["last_name"],
-                    row["birth_date"],
-                    row["sex"],
-                    row["club"] or "",
-                    row["license_number"],
-                    row["medical_certificate_valid_until"] or "",
-                    performance,
-                ]
-            )
+    rows = conn.execute(
+        "SELECT e.name AS event_name, e.unit, r.bib, a.*, res.performance FROM events e"
+        " JOIN registrations r ON r.event_id = e.id AND r.status = 'confirmed'"
+        " JOIN results res ON res.registration_id = r.id"
+        " JOIN athletes a ON a.id = r.athlete_id"
+        " WHERE e.competition_id = ? ORDER BY e.id, r.bib",
+        (competition_id,),
+    )
+    for row in rows:
+        if row["unit"] in ("time_s", "distance_m"):
+            performance = str(round(row["performance"], 2))
+        else:
+            performance = str(int(row["performance"]))
+        writer.writerow(
+            [
+                competition["name"],
+                row["event_name"],
+                row["unit"],
+                row["bib"],
+                row["first_name"],
+                row["last_name"],
+                row["birth_date"],
+                row["sex"],
+                row["club"] or "",
+                row["license_number"],
+                row["medical_certificate_valid_until"] or "",
+                performance,
+            ]
+        )
     return out.getvalue()
