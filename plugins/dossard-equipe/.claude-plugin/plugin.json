@@ -1,0 +1,10 @@
+{
+  "name": "dossard-equipe",
+  "description": "Outils d'équipe pour dossard : conventions d'API, hooks de garde, de formatage et de journal MCP, et serveur MCP dossard.",
+  "version": "1.0.0",
+  "author": {
+    "name": "paulmichel",
+    "email": "paul.michel610@outlook.fr"
+  },
+  "license": "MIT"
+}
