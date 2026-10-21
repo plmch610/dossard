@@ -31,3 +31,7 @@ uvicorn app.main:app --reload         # serveur sur http://localhost:8000
 - Pas de migrations : modifier `app/schema.sql` ne change pas une base existante ; relancer `python scripts/seed.py --reset`.
 - Les repositories (`app/repositories/`) ne font jamais de `commit()` : `get_conn` dans `app/db.py` s'en charge.
 - `scripts/mcp_dossard.py` n'expose que `v_public_athletes` et `v_public_results` ; n'y ajouter aucune donnée personnelle.
+
+## Revue en CI
+
+Toute revue de pull request faite en CI se termine par la ligne exacte `Revue CI — relu par Claude`.
