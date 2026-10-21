@@ -1,72 +1,15 @@
 {
   "permissions": {
-    "deny": [
-      "Read(./.env)",
-      "Read(./.env.*)",
-      "Read(**/.env)",
-      "Read(**/.env.*)",
-      "Edit(./.env)",
-      "Edit(**/.env)",
-      "Edit(**/.env.*)",
-      "Write(./.env)",
-      "Write(**/.env)",
-      "Write(**/.env.*)",
-      "Bash(cat *.env*)",
-      "Bash(head *.env*)",
-      "Bash(tail *.env*)",
-      "Bash(less *.env*)",
-      "Bash(more *.env*)",
-      "Bash(grep * *.env*)",
-      "Bash(sed * *.env*)",
-      "Bash(awk * *.env*)",
-      "Bash(cp *.env*)",
-      "Bash(source *.env*)",
-      "Bash(. *.env*)",
-      "Bash(printenv*)",
-      "Bash(env)",
-      "Bash(env *)",
-      "Edit(./scripts/legacy/**)",
-      "Write(./scripts/legacy/**)"
-    ],
-    "allow": ["mcp__dossard__list_views"],
-    "ask": ["mcp__dossard__query_view"]
+    "allow": ["mcp__plugin_dossard-equipe_dossard__list_views"],
+    "ask": ["mcp__plugin_dossard-equipe_dossard__query_view"],
+    "deny": ["Read(./.env)", "Edit(scripts/legacy/**)"]
   },
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash|PowerShell",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/garde.py"],
-            "onFailure": "block"
-          }
-        ]
-      },
-      {
-        "matcher": "mcp__dossard__.*",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/journal_mcp.py"],
-            "onFailure": "block"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "python",
-            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/formate.py"]
-          }
-        ]
-      }
-    ]
+  "extraKnownMarketplaces": {
+    "equipe-dossard": {
+      "source": { "source": "directory", "path": "." }
+    }
+  },
+  "enabledPlugins": {
+    "dossard-equipe@equipe-dossard": true
   }
 }
